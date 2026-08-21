@@ -1,87 +1,48 @@
 import { useState } from 'react'
-
-function App() {
-  const [apiKey, setApiKey] = useState('')
-  const [title, setTitle] = useState('Cinta Ditolak Dukun Bertindak')
-  const [style, setStyle] = useState('koplo jawa angkringan, cinta ditolak dukun bertindak, dangdut modern, male vocal')
-  const [lyrics, setLyrics] = useState(`[Verse]
-Cinta ditolak di angkringan
-Kopi pahit jadi saksi malam
-
-[Chorus]
-Dukun bertindak hatiku hancur
-Koplo jawa mengiringi tangisku`)
-  const [loading, setLoading] = useState(false)
-  const [songs, setSongs] = useState([])
-
-  const generate = async () => {
-    if(!apiKey.startsWith('sk_')){ alert('API Key salah! Harus sk_... dari kie.ai Dashboard > API Keys'); return }
-    setLoading(true)
-    setSongs([])
+function App(){
+  const [key,setKey]=useState('')
+  const [title,setTitle]=useState('Cinta Ditolak Dukun Bertindak')
+  const [style,setStyle]=useState('koplo jawa angkringan, cinta ditolak dukun bertindak')
+  const [lyrics,setLyrics]=useState('[Verse]\nCinta ditolak di angkringan\nKopi pahit jadi saksi malam\n\n[Chorus]\nDukun bertindak hatiku hancur\nKoplo jawa mengiringi tangisku')
+  const [load,setLoad]=useState(false)
+  const [songs,setSongs]=useState([])
+  const gen=async()=>{
+    if(!key){alert('Paste API Key dulu!');return}
+    setLoad(true)
     try{
-      // 1. GENERATE
-      const res = await fetch('https://api.kie.ai/api/v1/suno/generate', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey.trim()}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          title: title,
-          style: style,
-          lyrics: lyrics,
-          model: 'V4_5',
-          customMode: true,
-          instrumental: false,
-          callBackUrl: 'https://api.kie.ai/api/v1/callback', // WAJIB INI FIX 422
-          vocalGender: 'm'
+      const r=await fetch('https://api.kie.ai/api/v1/generate',{
+        method:'POST',
+        headers:{'Authorization':'Bearer '+key.trim(),'Content-Type':'application/json'},
+        body:JSON.stringify({
+          model:'V4_5', customMode:true, title, styleOfMusic:style, lyrics,
+          callBackUrl:'https://example.com/callback',
+          vocalGender:'m', instrumental:false
         })
       })
-      const data = await res.json()
-      console.log(data)
-      if(data.code !== 0 && data.code !== 200){
-        alert('Error Generate: ' + JSON.stringify(data))
-        setLoading(false)
-        return
-      }
-      const taskId = data.data.taskId
-      alert('Task dibuat: ' + taskId + ' - Tunggu 2 menit polling...')
-
-      // 2. POLLING HASIL
-      let tries = 0
-      while(tries < 30){
-        await new Promise(r=>setTimeout(r, 8000))
-        const infoRes = await fetch(`https://api.kie.ai/api/v1/generate/record-info?taskId=${taskId}`, {
-          headers: { 'Authorization': `Bearer ${apiKey.trim()}` }
-        })
-        const info = await infoRes.json()
-        console.log('poll', info)
-        if(info.data?.status === 'SUCCESS' || info.data?.state === 'SUCCESS'){
-          setSongs(info.data?.songs || info.data?.data || [])
-          alert('JADI! V5.5 Quality!')
-          break
+      const d=await r.json()
+      console.log(d)
+      if(d.code===422){alert('Masih 422! Berarti kode lama! Commit ulang & tunggu Actions ijo!'); setLoad(false); return}
+      if(d.data?.taskId){
+        let t=0
+        while(t<20){
+          await new Promise(x=>setTimeout(x,7000))
+          const i=await fetch('https://api.kie.ai/api/v1/generate/record-info?taskId='+d.data.taskId,{headers:{'Authorization':'Bearer '+key.trim()}})
+          const j=await i.json()
+          if(j.data?.state==='SUCCESS' || j.data?.status==='SUCCESS'){ setSongs(j.data.data||j.data.songs||[]); break }
+          t++
         }
-        tries++
-      }
-    }catch(e){
-      alert('Error: ' + e.message)
-    }
-    setLoading(false)
+      } else { setSongs(d.data? [d.data] : []) }
+    }catch(e){alert(e.message)}
+    setLoad(false)
   }
-
-  return (
-    <div style={{background:'#111', color:'white', minHeight:'100vh', padding:16}}>
-      <h2>🎵 Musika V5 - FIX 422 FINAL</h2>
-      <p style={{color:'yellow'}}>Paste API Key sk_... yang bener!</p>
-      <input value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="Paste sk_... disini" style={{width:'100%', padding:12, marginBottom:12, color:'black', border:'3px solid yellow'}} />
-      <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Title" style={{width:'100%', padding:10, marginBottom:8, color:'black'}} />
-      <textarea value={style} onChange={e=>setStyle(e.target.value)} style={{width:'100%', height:60, padding:8, color:'black', marginBottom:8}} />
-      <textarea value={lyrics} onChange={e=>setLyrics(e.target.value)} style={{width:'100%', height:120, padding:8, color:'black', marginBottom:10}} />
-      <button onClick={generate} style={{width:'100%', background:'#ff0055', color:'white', padding:16, borderRadius:10, fontWeight:'bold', border:'none'}}>
-        {loading ? '⏳ GENERATING TUNGGU...' : '🔥 GENERATE V5.5'}
-      </button>
-      {songs.map((s,i)=><div key={i} style={{marginTop:12, background:'#222', padding:10}}><p>{s.title}</p><audio controls src={s.audioUrl || s.audio_url} style={{width:'100%'}} /><a href={s.audioUrl || s.audio_url} style={{color:'yellow'}}>Download MP3</a></div>)}
-    </div>
-  )
+  return <div style={{background:'black',color:'white',padding:15,minHeight:'100vh'}}>
+    <h3>Musika V5 - FINAL FIX 422</h3>
+    <input value={key} onChange={e=>setKey(e.target.value)} placeholder="Paste key e658... disini" style={{width:'100%',padding:10,color:'black',marginBottom:8}}/>
+    <input value={title} onChange={e=>setTitle(e.target.value)} style={{width:'100%',padding:8,color:'black',marginBottom:6}}/>
+    <textarea value={style} onChange={e=>setStyle(e.target.value)} style={{width:'100%',height:50,color:'black',marginBottom:6}}/>
+    <textarea value={lyrics} onChange={e=>setLyrics(e.target.value)} style={{width:'100%',height:100,color:'black',marginBottom:10}}/>
+    <button onClick={gen} style={{width:'100%',background:'#ff0055',color:'white',padding:14,borderRadius:8,border:'none'}}>{load?'GENERATING...':'GENERATE V5.5 FIX'}</button>
+    {songs.map((s,i)=><div key={i} style={{marginTop:10,background:'#222',padding:8}}><audio controls src={s.audioUrl||s.audio_url} style={{width:'100%'}}/></div>)}
+  </div>
 }
 export default App
