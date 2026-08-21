@@ -1,8 +1,9 @@
 import { useState } from 'react'
 
 function App() {
+  const [apiKey, setApiKey] = useState('')
   const [title, setTitle] = useState('Cinta Ditolak Dukun Bertindak')
-  const [style, setStyle] = useState('koplo jawa angkringan, cinta ditolak dukun bertindak, dangdut modern')
+  const [style, setStyle] = useState('koplo jawa angkringan, cinta ditolak dukun bertindak, dangdut modern, male vocal')
   const [lyrics, setLyrics] = useState(`[Verse]
 Cinta ditolak di angkringan
 Kopi pahit jadi saksi malam
@@ -10,90 +11,75 @@ Kopi pahit jadi saksi malam
 [Chorus]
 Dukun bertindak hatiku hancur
 Koplo jawa mengiringi tangisku`)
-  const [vocalGender, setVocalGender] = useState('m')
-  const [duration, setDuration] = useState(120)
-  const [audioWeight, setAudioWeight] = useState(0.65)
-  const [instrumental, setInstrumental] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [songs, setSongs] = useState([])
+  const [result, setResult] = useState(null)
 
   const generate = async () => {
-    if(loading) return
+    if(!apiKey){ alert('Tempel API Key Kie dulu Cang! sk_...'); return }
+    if(!style){ alert('Style of Music kosong!'); return }
     setLoading(true)
-    try {
+    setResult(null)
+    try{
+      // LANGSUNG PAKAI KIE API V4_5 = V5.5 WEB
       const res = await fetch('https://api.kie.ai/api/v1/generate', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_KIE_API_KEY}`,
+          'Authorization': `Bearer ${apiKey.trim()}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           model: 'V4_5',
           customMode: true,
-          title: title || 'Koplo Jawa Angkringan',
+          title: title,
           styleOfMusic: style,
-          lyrics: instrumental ? '' : lyrics,
-          vocalGender: vocalGender,
-          instrumental: instrumental,
-          duration: Number(duration),
-          audioWeight: Number(audioWeight)
+          lyrics: lyrics,
+          vocalGender: 'm',
+          instrumental: false,
+          duration: 120
         })
       })
       const data = await res.json()
-      console.log(data)
-      setSongs(data.data || data.songs || [])
-      if(data.data?.length === 0) alert('Cek API Key di Secrets! ' + JSON.stringify(data))
-    } catch(e){
-      alert('Error: ' + e.message)
+      console.log('HASIL:', data)
+      if(data.code !== 0 && data.code !== 200){
+        alert('Error Kie: ' + JSON.stringify(data).slice(0,300))
+      } else {
+        setResult(data.data)
+      }
+    }catch(e){
+      alert('GAGAL FETCH: ' + e.message + ' - Coba matiin AdBlock!')
     }
     setLoading(false)
   }
 
   return (
-    <div style={{background:'black', color:'white', minHeight:'100vh', padding:20, fontFamily:'monospace'}}>
-      <h1>🎵 Musika Nusantara V5</h1>
-      <p>V4_5 = V5.5 Web Quality • Kredit: 50 per 2 lagu</p>
+    <div style={{background:'#111', color:'white', minHeight:'100vh', padding:16}}>
+      <h2>🎵 Musika Nusantara V5 - FIX TOMBOL</h2>
       
-      <label>Model*</label>
-      <select style={{width:'100%', padding:10, marginBottom:10, color:'black'}}><option>V5_5 (V4_5 Quality)</option></select>
+      <div style={{background:'red', padding:10, borderRadius:8, marginBottom:10}}>
+        ⚠️ TEMPEL API KEY DISINI (sk_...) - JANGAN DI SECRETS LAGI!
+      </div>
+      <input value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="Paste sk_... disini" style={{width:'100%', padding:12, marginBottom:12, color:'black', border:'2px solid red'}} />
 
       <label>Title *</label>
-      <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Enter a title" style={{width:'100%', padding:10, marginBottom:10, color:'black'}} />
+      <input value={title} onChange={e=>setTitle(e.target.value)} style={{width:'100%', padding:10, marginBottom:10, color:'black'}} />
 
       <label>Style of Music *</label>
-      <textarea value={style} onChange={e=>setStyle(e.target.value)} style={{width:'100%', height:80, padding:10, marginBottom:10, color:'black'}} />
-
-      <label>duration: {duration}</label>
-      <input type="range" min="30" max="180" value={duration} onChange={e=>setDuration(e.target.value)} style={{width:'100%'}} />
+      <textarea value={style} onChange={e=>setStyle(e.target.value)} style={{width:'100%', height:70, padding:10, marginBottom:10, color:'black'}} />
 
       <label>Lyrics *</label>
-      <textarea value={lyrics} onChange={e=>setLyrics(e.target.value)} style={{width:'100%', height:200, padding:10, marginBottom:10, color:'black'}} />
+      <textarea value={lyrics} onChange={e=>setLyrics(e.target.value)} style={{width:'100%', height:150, padding:10, marginBottom:10, color:'black'}} />
 
-      <label>vocalGender</label>
-      <select value={vocalGender} onChange={e=>setVocalGender(e.target.value)} style={{width:'100%', padding:10, marginBottom:10, color:'black'}}>
-        <option value="m">m - Male</option>
-        <option value="f">f - Female</option>
-      </select>
-
-      <label>audioWeight: {audioWeight}</label>
-      <input type="range" min="0" max="1" step="0.05" value={audioWeight} onChange={e=>setAudioWeight(e.target.value)} style={{width:'100%'}} />
-
-      <label style={{display:'flex', gap:10, marginTop:10}}><input type="checkbox" checked={instrumental} onChange={e=>setInstrumental(e.target.checked)} /> Instrumental</label>
-
-      {/* TOMBOL INI YANG BENER - PASTI BISA DIKLIK */}
+      {/* TOMBOL FIX */}
       <button 
-        type="button"
-        onClick={generate} 
-        disabled={loading}
-        style={{width:'100%', background: loading ? 'gray' : '#ff0055', color:'white', padding:15, marginTop:15, borderRadius:10, fontWeight:'bold', cursor:'pointer', border:'none', fontSize:16}}>
-        {loading ? 'GENERATING... Tunggu 2 menit' : 'GENERATE V5.5 QUALITY'}
+        onClick={()=>{ console.log('KLIK!'); generate(); }} 
+        style={{width:'100%', background:'#ff0055', color:'white', padding:18, borderRadius:12, fontWeight:'bold', fontSize:18, border:'none', cursor:'pointer'}}>
+        {loading ? '⏳ GENERATING 2 MENIT...' : '🔥 KLIK DISINI GENERATE V5.5'}
       </button>
 
-      {songs.map((s,i)=><div key={i} style={{marginTop:20, background:'#222', padding:10, borderRadius:10}}>
-        <p>{s.title || title}</p>
-        <audio controls src={s.audioUrl || s.audio_url} style={{width:'100%'}} />
-        <a href={s.audioUrl || s.audio_url} download style={{color:'yellow'}}>Download MP3</a>
-      </div>)}
+      {result && <div style={{marginTop:20, background:'#222', padding:12, borderRadius:10}}>
+        <p>SUKSES!</p>
+        <pre style={{fontSize:10, whiteSpace:'pre-wrap'}}>{JSON.stringify(result, null, 2)}</pre>
+      </div>}
     </div>
   )
 }
